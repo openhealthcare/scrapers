@@ -1,9 +1,12 @@
 #!/usr/bin/env python
+import copy
 import collections
 import re
 import copy
 import requests
 import time
+import json
+import sys
 from lxml.html import fromstring
 from urlparse import urljoin
 from picklecache import cache
@@ -55,18 +58,21 @@ def process():
         process_page(href, data)
 
 process()
-keys = sorted(content.keys())
-print u'<?xml version="1.0" encoding="utf-8"?>'
-print u'<guidelines>'
-print u'<provider name="NICE">'
-for key in keys:
-    print u'<category name="%s">' % key
-    for g in content[key]:
-        print (u'''   <guideline category="%s" code="%s" subcategory="">
-                <url>%s</url>
-                <title>%s</title>
-            </guideline>''' % (g['category'], g['code'], g['url'], g['title'])).encode('utf-8')
 
-    print u'</category>'
-print u'</provider>'
-print u'</guidelines>'
+out = {
+    'categories': [],
+    'guidelines': []
+}
+
+
+for key in content.keys():
+    if not key in out['categories']:
+        out['categories'].append(key)
+
+    for g in content[key]:
+        out['guidelines'].append(copy.deepcopy(g))
+
+
+out['categories'] = sorted(out['categories'])
+
+json.dump(out, sys.stdout)
