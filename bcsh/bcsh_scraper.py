@@ -28,6 +28,11 @@ for row in rows:
     desc = row[1].cssselect('.glinfo')
     desc = desc[0].text_content() if desc else ''
 
+    cat = row[0].get('class').split(' ')[-1]
+    cat = cat.replace('_', ' ')
+    if not cat in out['categories']:
+        out['categories'].append(cat)
+
     # title, pdf, dt
     out['guidelines'].append({
             'code': '',
@@ -35,8 +40,9 @@ for row in rows:
             'date': dt,
             'description': desc,
             'url': pdf,
-            'category': ''
+            'category': cat
     })
 
+out['categories'] = sorted(out['categories'])
 
 json.dump(out, sys.stdout)
