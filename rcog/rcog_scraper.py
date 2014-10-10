@@ -1,49 +1,74 @@
 #!/usr/bin/env python
 
-print 'Need to do paging, remove SW deps etc'
-import sys; sys.exit(0)
-
 
 import os, sys
+import json
 
 import lxml.html
 import lxml.etree
 import urllib2
 import urlparse
 import requests
+import re
 
-import scraperwiki
+base = 'https://www.rcog.org.uk'
 
-base_url = 'http://www.rcog.org.uk/guidelines?filter0%5B%5D=10'
-html = scraperwiki.scrape(base_url)
-page = lxml.html.fromstring(html)
-table = page.cssselect( 'div.view-content-clinical-health-documents table')[0]
-for row in table.cssselect('tbody tr'):
-    href = row[0][0]
+def scrape_pdf(source):
+    html = requests.get(source).content
+    page = lxml.html.fromstring(html)
 
-    title = href.text_content()
+    raw_title = page.cssselect('h1')[0].text_content()
+    title = raw_title[0:raw_title.index('(')]
 
-    fullpage = urlparse.urljoin( base_url, href.attrib.get('href') )
-    published = row[1].text_content()
+    try:
+        link = page.cssselect('#Content_Content_hypDocLink')[0]
+    except:
+        # No link is archived
+        return None
 
-    newpage_html = scraperwiki.scrape(fullpage)
-    newpage = lxml.html.fromstring(newpage_html)
-    for a in newpage.cssselect('a'):
-        h = urlparse.urljoin( base_url, a.attrib.get('href') )
-        if '.pdf' in h:
-            t = a.text_content()
-            if t and not t =='here':
-                title = t
+    url = urlparse.urljoin(base, link.get('href'))
 
-            r = requests.head(h)
-            size = r.headers['content-length']
-            if int(size) == 0:
-                continue
+    start = raw_title.index('(')+1
+    length = (raw_title.index(')')+1) - start
+    code = raw_title[start:start + length]
 
-            kwlist = [x.lower() for x in title.split(' ') if not x.lower() in ['the', 'of', 'in', 'and', 'its']]
-            keywords = ','.join(kwlist)
-            pubmonth,pubyear = published.split(' ')
+    block = page.cssselect('.col-md-8')[0].text_content()
+    m = re.search('.*?(\d+/\d+/\d+).*', block)
+    date = ''
 
-            d = {'title': title, 'published_month': pubmonth, 'published_year':pubyear, 'link' : h, 'keywords': keywords, 'size': size}
-            scraperwiki.sqlite.save(['title'], d)
+    if m:
+        date = m.groups()[0]
+    data = {
+            'code': code,
+            'title': title.strip().decode('utf-8'),
+            'date': date.strip(),
+            'description': '',
+            'url': url,
+            'category': ''
+    }
 
+    return data
+
+
+def scrape_page(source):
+    html = requests.get(source).content
+    page = lxml.html.fromstring(html)
+    table = page.cssselect( 'table.results tr')
+    if not len(table):
+        return
+
+    for row in table:
+        link = row[0].cssselect('.title a')
+        pdf_source = urlparse.urljoin(base, link[0].get('href'))
+        yield scrape_pdf(pdf_source)
+
+
+out = {'categories': [], 'guidelines': []}
+
+for x in range(1, 7):  # Yeah, yeah, hard-coded page count
+    source = "https://www.rcog.org.uk/guidelines?filter0[]=10&p=%s" % x
+    for result in scrape_page(source):
+        if result:
+            out['guidelines'].append(result)
+
+json.dump(out, sys.stdout)
