@@ -11,8 +11,6 @@ python nice/nice_scraper.py > guidelines.json
 
 ## BCSH
 
-**Broken**
-
 
 ```
 python bcsh/bcsh_scraper.py > guidelines.json

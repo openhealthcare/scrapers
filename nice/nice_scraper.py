@@ -54,6 +54,7 @@ def process():
             'code': code.strip(),
             'title': title.strip().decode('utf-8'),
             'date': date.strip(),
+            'description': ''
         }
         process_page(href, data)
 
