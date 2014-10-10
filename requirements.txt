@@ -1,0 +1,4 @@
+picklecache
+requests
+lxml
+cssselect
