@@ -19,8 +19,6 @@ python bcsh/bcsh_scraper.py > guidelines.json
 
 ## RCOG
 
-**Broken**
-
 
 ```
 python rcog/rcog_scraper.py > guidelines.json
@@ -29,6 +27,4 @@ python rcog/rcog_scraper.py > guidelines.json
 
 ## TODO:
 
-* Remove ScraperWiki deps from broken scrapers
-* Check pagination
 * Move guideline.json generation into a shared place.
